@@ -1,7 +1,9 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import { ConvexProvider, ConvexReactClient } from "convex/react";
+import { Slot } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
+import { ThemeProvider as AppThemeProvider } from '../src/hooks/useThemeStore';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -13,12 +15,14 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <ConvexProvider client={new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL!)}>
+      <AppThemeProvider>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          {/* Render the router Slot so the normal index route is used */}
+          <Slot />
+          <StatusBar style="auto" />
+        </ThemeProvider>
+      </AppThemeProvider>
+    </ConvexProvider>
   );
 }
