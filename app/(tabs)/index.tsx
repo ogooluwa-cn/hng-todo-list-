@@ -1,98 +1,118 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { useMutation, useQuery } from "convex/react";
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Dimensions,
+  FlatList,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import InputField from "../../components/InputField";
+import ThemeToggle from "../../components/ThemeToggle";
+import TodoItem from "../../components/TodoItem";
+import { api } from "../../convex/_generated/api";
+import { ThemeProvider, useTheme } from "../../src/hooks/useThemeStore";
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+type Todo = { _id: string; title: string; completed?: boolean };
 
-export default function HomeScreen() {
+const { width } = Dimensions.get("window");
+const CARD_WIDTH = Math.min(480, Math.round(width * 0.78));
+
+export default function HomeScreenWrapper() {
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <ThemeProvider>
+      <HomeScreen />
+    </ThemeProvider>
+  );
+}
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+function HomeScreen() {
+  const { theme, isDark } = useTheme();
+  const todosQuery = useQuery(api.todos.getTodos) as any[] | undefined;
+  const createTodo = useMutation(api.todos.addTodo);
+  const updateTodo = useMutation(api.todos.toggleTodo);
+  const deleteTodo = useMutation(api.todos.deleteTodo);
+
+  const [data, setData] = useState<Todo[]>([]);
+  const [title, setTitle] = useState("");
+
+  useEffect(() => {
+    if (todosQuery) setData(todosQuery.map((t) => ({ ...t, _id: t._id })));
+  }, [todosQuery]);
+
+  const onAdd = async () => {
+    if (!title.trim()) return;
+    try {
+      await createTodo({ title: title.trim() } as any);
+      setTitle("");
+    } catch (err) {
+      console.warn("add err", err);
+    }
+  };
+
+  const onToggle = async (id: string, done: boolean) => {
+    try {
+      await updateTodo({ id: id as any, completed: done } as any);
+    } catch (err) {
+      console.warn("toggle err", err);
+    }
+  };
+
+  const onDelete = async (id: string) => {
+    try {
+      await deleteTodo({ id: id as any } as any);
+    } catch (err) {
+      console.warn("delete err", err);
+    }
+  };
+
+  const renderItem = useCallback(({ item }: { item: Todo }) => (
+    <TodoItem item={item} onToggle={onToggle} onDelete={onDelete} onEdit={() => {}} />
+  ), [onToggle, onDelete]);
+
+  if (!todosQuery) {
+    return (
+      <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
+        <ActivityIndicator style={{ marginTop: 40 }} />
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}> 
+      <View style={[styles.header, { backgroundColor: isDark ? '#5b21b6' : '#7f5af0' }]}>
+        <Text style={styles.logo}>T O D O</Text>
+        <ThemeToggle />
+      </View>
+
+      <View style={styles.outerCenter}>
+        <View style={[styles.card, { width: CARD_WIDTH, backgroundColor: theme.card }]}> 
+          <InputField 
+            value={title} 
+            onChangeText={setTitle} 
+            placeholder="Create a new todo..." 
+            onSubmit={onAdd} 
+          />
+
+          <View style={{ marginTop: 8, maxHeight: 340 }}>
+            <FlatList 
+              data={data} 
+              keyExtractor={(item: Todo) => item._id} 
+              renderItem={renderItem} 
+            />
+          </View>
+        </View>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
+  safe: { flex: 1 },
+  header: { height: 180, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 },
+  logo: { color: '#fff', fontSize: 28, fontWeight: '800', letterSpacing: 8, marginBottom: 8 },
+  outerCenter: { alignItems: 'center', marginTop: -40 },
+  card: { borderRadius: 12, padding: 18, shadowColor: '#000', shadowOpacity: 0.08, shadowOffset: { width: 0, height: 6 }, shadowRadius: 14, elevation: 6 },
 });

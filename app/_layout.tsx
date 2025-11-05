@@ -1,10 +1,10 @@
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { ConvexProvider, ConvexReactClient } from "convex/react";
 import { Slot } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { ThemeProvider as AppThemeProvider } from '../src/hooks/useThemeStore';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 
 // Create the Convex client outside of the component to avoid re-creation
 const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL || process.env.EXPO_PUBLIC_CONVEX_URL || '');
