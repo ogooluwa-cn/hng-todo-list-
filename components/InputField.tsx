@@ -8,10 +8,11 @@ type Props = {
   placeholder?: string;
   value?: string;
   onChangeText?: (t: string) => void;
+  onSubmit?: () => void;
   multiline?: boolean;
 };
 
-export default function InputField({ label, placeholder, value, onChangeText, multiline = false }: Props) {
+export default function InputField({ label, placeholder, value, onChangeText, onSubmit, multiline = false }: Props) {
   const { theme } = useTheme();
 
   return (
@@ -23,6 +24,9 @@ export default function InputField({ label, placeholder, value, onChangeText, mu
         placeholder={placeholder}
         placeholderTextColor={theme.placeholder as string}
         multiline={multiline}
+        onSubmitEditing={() => {
+          if (onSubmit) onSubmit();
+        }}
         style={{
           backgroundColor: theme.card,
           color: theme.text,
